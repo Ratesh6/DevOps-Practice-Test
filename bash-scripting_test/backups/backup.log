@@ -1,0 +1,7 @@
+[2025-11-03 12:31:13] INFO: Starting backup of /home/ratesh/testdata/project1 -> /mnt/c/Users/Lenovo/Documents/GitHub/DevOps-Practice-Test/bash-scripting_test/backups/backup-2025-11-03-1231.tar.gz
+[2025-11-03 12:31:13] SUCCESS: Backup created: backup-2025-11-03-1231.tar.gz
+[2025-11-03 12:30:43] INFO: Checksum file created: backup-2025-11-03-1231.tar.gz.md5
+[2025-11-03 12:30:43] INFO: Checksum verified successfully
+[2025-11-03 12:30:44] INFO: Archive extraction test succeeded
+[2025-11-03 12:30:44] INFO: Starting rotation
+[2025-11-03 12:30:44] SUCCESS: Rotation completed
