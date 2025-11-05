@@ -1,43 +1,187 @@
-** Project Explanation **
+## A. Project Overview
 
-This project is a fully automated backup system built using Bash scripting.
-It is designed for DevOps practice to demonstrate automation, file management, logging, and reliability in system maintenance.
+### What does this script do?
 
-The goal of this project is to create reliable backups of critical files or project directories while maintaining integrity and organization. The script automatically compresses selected folders, generates checksum files for verification, logs all operations, and rotates old backups according to a retention policy.
+This script automatically creates compressed backups (`.tar.gz`) of your chosen folders. It also generates checksum files to ensure data integrity, keeps only recent backups (rotation), and provides options to restore or list backups.
 
-The configuration file (backup.config) allows full customization — including destination paths, excluded patterns, checksum commands, and how many backups to keep. This makes the system flexible enough to handle different environments and use cases.
+### Why is it useful?
 
-The backup process includes the following major stages:
+Manual backups are time-consuming and error-prone. This script saves time by:
 
-Initialization:
-Reads configuration parameters (backup destination, exclude patterns, checksum command, etc.) and validates inputs.
+* Running automatically with one command
+* Verifying backup integrity
+* Cleaning old backups automatically
+* Preventing accidental multiple runs with a lockfile
+* Supporting dry-run mode for testing
 
-Backup Creation:
-Creates a timestamped .tar.gz archive of the source directory, excluding unnecessary files (e.g., .git, node_modules, .cache).
+---
 
-Checksum Generation and Verification:
-Generates a checksum (.md5 or .sha256) for each backup to ensure the backup file is not corrupted. Verification ensures data integrity before marking the process as successful.
+## B. How to Use It
 
-Logging:
-All activities, such as start time, backup success, checksum creation, and errors, are recorded in backup.log.
-This ensures transparency and traceability of backup operations.
+### Installation Steps
 
-Backup Rotation:
-Implements a retention policy that automatically removes old backups (daily, weekly, monthly) to manage disk space efficiently.
+1. Clone or copy the script to your local machine.
+2. Make the script executable:
 
-Restore Feature:
-Provides a command to restore data from a specific backup archive into any directory, ensuring recovery can be performed quickly.
+   ```bash
+   chmod +x backup.sh
+   ```
+3. Create a `backup.config` file in the same folder:
 
-Automation Ready:
-The system is designed to run manually or automatically through a cron job or systemd timer for scheduled backups.
+   ```bash
+   BACKUP_DESTINATION="/home/user/backups"
+   EXCLUDE_PATTERNS="*.tmp,*.log"
+   DAILY_KEEP=3
+   WEEKLY_KEEP=2
+   MONTHLY_KEEP=2
+   CHECKSUM_CMD="sha256sum"
+   ```
 
-Overall, this project simulates a real-world backup management system and demonstrates:
-    File handling automation in Bash
+### Basic Usage Examples
 
-    Logging and checksum validation
+* **Create a new backup:**
 
-    Error handling and reporting
+  ```bash
+  ./backup.sh --backup /home/user/data
+  ```
+* **Restore a backup:**
 
-    Configurable backup policies
+  ```bash
+  ./backup.sh --restore /home/user/backups/backup-2025-11-05-1130.tar.gz /tmp/restore
+  ```
+* **List all backups:**
 
-    Integration with Linux file system tools
+  ```bash
+  ./backup.sh --list
+  ```
+* **Dry-run mode (no actual backup created):**
+
+  ```bash
+  ./backup.sh --dry-run --backup /home/user/data
+  ```
+
+### All Command Options
+
+| Command                            | Description                              |
+| ---------------------------------- | ---------------------------------------- |
+| `--backup <src_dir>`               | Create a compressed backup               |
+| `--restore <archive> <target_dir>` | Restore files from a backup              |
+| `--list`                           | Show available backups                   |
+| `--dry-run`                        | Simulate actions without performing them |
+
+---
+
+## C. How It Works
+
+### Rotation Algorithm
+
+1. The script lists all backups by date.
+2. It keeps only a limited number of daily, weekly, and monthly backups:
+
+   * Keeps `DAILY_KEEP` most recent days.
+   * Keeps `WEEKLY_KEEP` most recent weeks.
+   * Keeps `MONTHLY_KEEP` most recent months.
+3. Older backups are deleted automatically unless in dry-run mode.
+
+### Checksum Creation
+
+After each backup, the script creates a checksum file using:
+
+```bash
+sha256sum backup.tar.gz > backup.tar.gz.md5
+```
+
+It then verifies the checksum to confirm the backup was created correctly.
+
+### Folder Structure
+
+Example backup folder:
+
+```
+/home/user/backups/
+├── backup-2025-11-01-0900.tar.gz
+├── backup-2025-11-01-0900.tar.gz.md5
+├── backup-2025-11-02-0900.tar.gz
+├── backup-2025-11-02-0900.tar.gz.md5
+└── backup.log
+```
+
+---
+
+## D. Design Decisions
+
+### Why This Approach?
+
+* Bash is available on all Linux systems, no need for extra software.
+* `tar` and `sha256sum` are reliable and fast.
+* Configuration file makes it flexible for different systems.
+
+### Challenges Faced
+
+1. **Preventing parallel backups** – Solved using a lock file `/tmp/backup.lock`.
+2. **Handling errors safely** – Used `set -euo pipefail` and proper logging.
+3. **Backup rotation** – Designed a clear logic using daily/weekly/monthly tags.
+
+---
+
+## E. Testing
+
+### How the Script Was Tested
+
+1. Created a test folder with files:
+
+   ```bash
+   mkdir test_data && echo "hello" > test_data/file1.txt
+   ```
+2. Ran the following commands:
+
+   ```bash
+   ./backup.sh --backup test_data
+   ./backup.sh --list
+   ./backup.sh --dry-run --backup test_data
+   ./backup.sh --restore /home/user/backups/backup-2025-11-05-1130.tar.gz /tmp/restore
+   ```
+
+### Example Outputs
+
+**Creating Backup:**
+
+```
+[2025-11-05 11:30:00] INFO: Starting backup of test_data -> backup-2025-11-05-1130.tar.gz
+[2025-11-05 11:30:10] SUCCESS: Backup created: backup-2025-11-05-1130.tar.gz
+[2025-11-05 11:30:11] INFO: Checksum verified successfully
+[2025-11-05 11:30:12] INFO: Archive extraction test succeeded
+```
+
+**Dry Run Example:**
+
+```
+[2025-11-05 11:32:00] DRY: Would run: tar -czf backup.tar.gz -C /test_data
+```
+
+**Error Handling Example (invalid folder):**
+
+```
+Error: Source folder not found: /fake/folder
+```
+
+**Automatic Deletion Example:**
+
+```
+[2025-11-05 11:33:00] INFO: Deleted old backup backup-2025-10-15-0900.tar.gz
+```
+
+---
+
+## F. Known Limitations
+
+* Currently supports **one source folder** per run.
+* Backup rotation is based only on file timestamps (not actual creation time).
+* Does not yet support **remote upload** (e.g., AWS S3 or SSH).
+* No email or notification system for success/failure yet.
+
+### Possible Improvements
+
+* Add remote cloud backup support (AWS, Google Drive, etc.)
+* Add scheduling via `cron`
+* Add color-coded log output for better readability
