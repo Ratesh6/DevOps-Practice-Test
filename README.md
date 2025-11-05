@@ -170,18 +170,3 @@ Error: Source folder not found: /fake/folder
 ```
 [2025-11-05 11:33:00] INFO: Deleted old backup backup-2025-10-15-0900.tar.gz
 ```
-
----
-
-## F. Known Limitations
-
-* Currently supports **one source folder** per run.
-* Backup rotation is based only on file timestamps (not actual creation time).
-* Does not yet support **remote upload** (e.g., AWS S3 or SSH).
-* No email or notification system for success/failure yet.
-
-### Possible Improvements
-
-* Add remote cloud backup support (AWS, Google Drive, etc.)
-* Add scheduling via `cron`
-* Add color-coded log output for better readability
